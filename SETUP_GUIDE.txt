@@ -1,0 +1,263 @@
+══════════════════════════════════════════════════════════════════════╗
+║  📋 تعليمات الاستضافة السحابية - موقع مصنع رويال للأنابيب          ║
+║  Ramzi Al-Qahtani - Royal Factory                                   ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+══════════════════════════════════════════════════════════════════════
+ 🎯 الملخص: 3 خطوات فقط!
+══════════════════════════════════════════════════════════════════════
+
+  ✅ الخطوة 1: أنشئ قاعدة بيانات Supabase (مجاني)
+  ✅ الخطوة 2: ارفع الموقع على Netlify (مجاني)
+  ✅ الخطوة 3: أدخل مفاتيح Supabase من لوحة التحكم
+  ✅ النتيجة: المنتجات تظهر فوراً لجميع عملائك في اليمن!
+
+══════════════════════════════════════════════════════════════════════
+ الخطوة 1: إنشاء قاعدة البيانات (5 دقائق)
+══════════════════════════════════════════════════════════════════════
+
+1. افتح المتصفح: https://supabase.com
+2. اضغط "Start your project"
+3. سجّل الدخول (Google أو GitHub - مجاني)
+4. اضغط "New Project"
+5. اختر:
+   • الاسم: royal-pipes
+   • كلمة المرور: اختر كلمة قوية (احتفظ بها!)
+   • المنطقة: Frankfurt أو Singapore
+6. انتظر دقيقة حتى يكتمل الإنشاء
+7. من القائمة الجانبية:
+   → اذهب إلى "SQL Editor"
+   → اضغط "New query"
+   → انسخ الكود التالي وألصقه بالكامل:
+
+══════════════════════════════════════════════════════════════════════
+═══ BEGIN SQL CODE - انسخ من هنا ═══
+══════════════════════════════════════════════════════════════════════
+
+-- جدول المنتجات
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category_id TEXT NOT NULL,
+  subcategory_id TEXT NOT NULL,
+  price NUMERIC DEFAULT 0,
+  currency TEXT DEFAULT 'ريال',
+  description TEXT,
+  image TEXT,
+  featured BOOLEAN DEFAULT FALSE,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  updated_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- جدول الوكلاء
+CREATE TABLE IF NOT EXISTS agents (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT DEFAULT '',
+  address TEXT DEFAULT '',
+  governorate_id TEXT DEFAULT '',
+  logo TEXT,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- جدول البنرات
+CREATE TABLE IF NOT EXISTS banners (
+  id TEXT PRIMARY KEY,
+  title TEXT DEFAULT '',
+  subtitle TEXT DEFAULT '',
+  cta TEXT DEFAULT '',
+  link TEXT DEFAULT '',
+  image TEXT DEFAULT '',
+  active BOOLEAN DEFAULT TRUE,
+  expires_at TEXT,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- جدول الرسائل
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  name TEXT DEFAULT '',
+  email TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  subject TEXT DEFAULT '',
+  message TEXT DEFAULT '',
+  read BOOLEAN DEFAULT FALSE,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- جدول الإعدادات
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value JSONB DEFAULT '{}'::JSONB
+);
+
+-- تفعيل التحديث الفوري!
+-- (المنتجات تظهر فوراً عند إضافتها)
+DROP PUBLICATION IF EXISTS supabase_realtime;
+CREATE PUBLICATION supabase_realtime FOR ALL TABLES;
+
+-- سياسات القراءة (مفتوحة للجميع)
+DROP POLICY IF EXISTS read_products ON products;
+CREATE POLICY read_products ON products FOR SELECT USING (true);
+DROP POLICY IF EXISTS read_agents ON agents;
+CREATE POLICY read_agents ON agents FOR SELECT USING (true);
+DROP POLICY IF EXISTS read_banners ON banners;
+CREATE POLICY read_banners ON banners FOR SELECT USING (true);
+DROP POLICY IF EXISTS read_messages ON messages;
+CREATE POLICY read_messages ON messages FOR SELECT USING (true);
+DROP POLICY IF EXISTS read_settings ON settings;
+CREATE POLICY read_settings ON settings FOR SELECT USING (true);
+
+-- سياسات الكتابة (للمدير)
+DROP POLICY IF EXISTS write_products ON products;
+CREATE POLICY write_products ON products FOR ALL USING (true);
+DROP POLICY IF EXISTS write_agents ON agents;
+CREATE POLICY write_agents ON agents FOR ALL USING (true);
+DROP POLICY IF EXISTS write_banners ON banners;
+CREATE POLICY write_banners ON banners FOR ALL USING (true);
+DROP POLICY IF EXISTS write_messages ON messages;
+CREATE POLICY write_messages ON messages FOR ALL USING (true);
+DROP POLICY IF EXISTS write_settings ON settings;
+CREATE POLICY write_settings ON settings FOR ALL USING (true);
+
+-- بيانات افتراضية
+INSERT INTO products (id, name, category_id, subcategory_id, price, currency, description, image, featured) VALUES
+('p1', 'ماسورة PVC-U أبيض 20ملم (½ بوصة)', 'plumbing', 'pvc-pipes', 85, 'ريال', 'ماسورة PVC-U أبيض، قطر 20 ملم، ضغط 10 بار، طول 3 متر.', '/images/hero-pipes.jpg', true),
+('p2', 'ماسورة PVC-U أبيض 25ملم (¾ بوصة)', 'plumbing', 'pvc-pipes', 120, 'ريال', 'ماسورة PVC-U أبيض، قطر 25 ملم، ضغط 10 بار.', '/images/hero-pipes.jpg', false),
+('p3', 'ماسورة PVC-U أبيض 110ملم (4 بوصة)', 'plumbing', 'pvc-pipes', 1100, 'ريال', 'ماسورة PVC-U أبيض، قطر 110 ملم، ضغط 6 بار.', '/images/hero-pipes.jpg', true),
+('p4', 'ماسورة PE للري 32ملم - 100 متر', 'agriculture', 'irrigation-pipes', 380, 'ريال', 'ماسورة PE أسود للري، قطر 32 ملم.', '/images/agriculture-irrigation.jpg', true),
+('p5', 'أنبوب تنقيط 16ملم (1000 متر)', 'agriculture', 'drip-irrigation', 1800, 'ريال', 'أنبوب تنقيط PE أسود، نقاط كل 30 سم.', '/images/agriculture-irrigation.jpg', true),
+('p6', 'سلك NYM 3×1.5 ملم (100 متر)', 'electrical', 'cables', 850, 'ريال', 'سلك كهرباء NYM معزول.', '/images/electrical-cables.jpg', true),
+('p7', 'حديد تسليح 10ملم (12 متر)', 'building', 'rebar', 180, 'ريال', 'حديد تسليح رصاصي قطر 10 ملم.', '/images/building-materials.jpg', true),
+('p8', 'أسمنت بورتلاندي 50كغ', 'building', 'cement', 180, 'ريال', 'كيس أسمنت بورتلاندي نوع I.', '/images/building-materials.jpg', true),
+('p9', 'دهان أكريليك أبيض مطفي (18 لتر)', 'building', 'paint', 1450, 'ريال', 'دهان أكريليك مطفي أبيض.', '/images/building-materials.jpg', true),
+('p10', 'حبس كروي PVC - ½ بوصة', 'plumbing', 'valves', 120, 'ريال', 'حبس كروي PVC-U نصف بوصة.', '/images/pvc-fittings.jpg', true),
+('p11', 'مرشة دوار صغيرة', 'agriculture', 'sprinklers', 180, 'ريال', 'مرشة ري دوار صغيرة، مدى 8-12 متر.', '/images/agriculture-irrigation.jpg', true),
+('p12', 'لمبة LED 9 واط', 'electrical', 'lights', 75, 'ريال', 'لمبة LED موفرة 9 واط.', '/images/electrical-cables.jpg', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO agents (id, name, phone, address, governorate_id) VALUES
+('a101', 'مؤسسة النور للتجارة', '+967 771 234 567', 'شارع الزبيري، صنعاء', 'sanaa'),
+('a102', 'شركة الكبير للمواد', '+967 772 345 678', 'حي الحدادة، صنعاء', 'sanaa'),
+('a103', 'مؤسسة عدن للسباكة', '+967 773 456 789', 'حي المعلا، عدن', 'aden'),
+('a104', 'شركة تعز التجارية', '+967 774 567 890', 'حي الجحملية، تعز', 'taiz'),
+('a105', 'مؤسسة حضرموت', '+967 775 678 901', 'حي المنصورة، المكلا', 'hadrmut'),
+('a106', 'شركة إب للكهرباء', '+967 776 789 012', 'حي المركز، إب', 'ibb'),
+('a107', 'مؤسسة الضالع', '+967 777 890 123', 'المركز، الضالع', 'aldhala'),
+('a108', 'شركة البيضاء', '+967 778 901 234', 'المركز، البيضاء', 'albayda'),
+('a109', 'مؤسسة مأرب', '+967 779 012 345', 'المركز، مأرب', 'marib'),
+('a110', 'شركة الجوف', '+967 781 111 222', 'المركز، الجوف', 'aljawf'),
+('a111', 'مؤسسة صعدة', '+967 782 222 333', 'حي المركز، صعدة', 'sadah'),
+('a112', 'شركة عمران', '+967 783 333 444', 'المركز، عمران', 'amran'),
+('a113', 'مؤسسة ذمار', '+967 784 444 555', 'المركز، ذمار', 'dhamar'),
+('a114', 'شركة الحديدة', '+967 785 555 666', 'المركز، الحديدة', 'alhodiedah'),
+('a115', 'مؤسسة لحج', '+967 786 666 777', 'المركز، لحج', 'lahij'),
+('a116', 'شركة أبين', '+967 777 888 999', 'المركز، أبين', 'abin'),
+('a117', 'مؤسسة شبوة', '+967 788 888 999', 'المركز، شبوة', 'shabwah'),
+('a118', 'شركة المهرة', '+967 789 999 000', 'المركز، المهرة', 'almahrah'),
+('a119', 'مؤسسة ريمة', '+967 781 222 444', 'المركز، ريمة', 'raymah'),
+('a120', 'شركة المحويت', '+967 782 333 555', 'المركز، المحويت', 'almuhawit'),
+('a121', 'مؤسسة حجة', '+967 783 444 666', 'المركز، حجة', 'hajjah'),
+('a122', 'شركة سقطرى', '+967 784 555 777', 'المركز، سقطرى', 'socotra')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO banners (id, title, subtitle, cta, link, image, active) VALUES
+('bn1', 'مواسير رويال PVC-U... الجودة بكل المقاييس', 'مصنع الأنوار للبلاستيك ينتج وفق المواصفات القياسية العالمية.', 'اكتشف المنتجات', '#products/plumbing', '/images/hero-pipes.jpg', true),
+('bn2', 'شبكات الري والزراعة الحديثة', 'أنابيب تنقيط، مرشات، مضخات، وفلاتر.', 'تصفح مواد الزراعة', '#products/agriculture', '/images/agriculture-irrigation.jpg', true),
+('bn3', 'ختم الجودة من رويال', 'ALANWAR GUARANTEE SINCE 1982', 'تعرف على مصنعنا', '#about', '/images/factory-production.jpg', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO settings (key, value) VALUES ('general', '{
+  "productName":"مصنع رويال للأنابيب ومستلزماتها",
+  "tagline":"Royal Factory for Pipes & Accessories",
+  "managerName":"رمزي القحطاني - مسؤول المبيعات",
+  "salesPhone":"782002220",
+  "accountsPhone":"782002225",
+  "inquiryPhone":"782002229",
+  "deliveryPhone":"784414445",
+  "whatsapp":"+967 782 002 220",
+  "email":"info@royal-pipes.com",
+  "address":"مصنع الأنوار للبلاستيك - رويال"
+}') ON CONFLICT (key) DO NOTHING;
+
+══════════════════════════════════════════════════════════════════════
+═══ END SQL CODE - إلى هنا ═══
+══════════════════════════════════════════════════════════════════════
+
+8. اضغط "Run" في الأعلى
+9. إذا ظهر "SUCCESS" ✅ → تم بنجاح!
+10. الآن احصل على المفاتيح:
+    → اذهب إلى: Settings (⚙️ أيقونة الترس)
+    → ثم: API
+    → انسخ: **Project URL** (مثل https://xxxxx.supabase.co)
+    → انسخ: **anon / public key** (سلسلة طويلة تبدأ بـ eyJh...)
+
+══════════════════════════════════════════════════════════════════════
+ الخطوة 2: رفع الموقع على Netlify (3 دقائق)
+══════════════════════════════════════════════════════════════════════
+
+📁 الطريقة الأسهل - سحب وإفلات:
+
+1. افتح المتصفح: https://app.netlify.com/drop
+2. سجّل دخولك أو أنشئ حساب (Google أو GitHub - مجاني)
+3. في جهازك، افتح مجلد المشروع
+4. افتح Terminal/CMD واكتب:
+   npm run build
+   (سينشئ مجلد اسمه dist/)
+5. اسحب مجلد **dist/** وأفلته في صفحة Netlify
+6. سيُرفع الموقع فوراً! ستحصل على رابط مثل:
+   https://random-name-12345.netlify.app
+7. لتغيير الاسم: Site settings → Change site name → royal-pipes
+
+══════════════════════════════════════════════════════════════════════
+ الخطوة 3: ربط الموقع بقاعدة البيانات (دقيقة واحدة)
+══════════════════════════════════════════════════════════════════════
+
+1. افتح موقعك الجديد (رابط Netlify)
+2. اضغط "لوحة التحكم" (أو اذهب إلى /admin)
+3. سجّل دخول: admin / royal2026
+4. من القائمة الجانبية: "الإعدادات"
+5. أدخل:
+   • Project URL: https://xxxxx.supabase.co
+   • anon key: eyJh... (الطويلة)
+6. اضغط "حفظ الإعدادات"
+7. ✅ تم! الموقع الآن متصل بالسحابة!
+
+══════════════════════════════════════════════════════════════════════
+ ✅ النتيجة النهائية:
+══════════════════════════════════════════════════════════════════════
+
+📱 المدير (رمزي القحطاني):
+  → يفتح لوحة التحكم من أي جهاز (جوال أو كمبيوتر)
+  → يضيف منتج جديد (اسم، سعر، صورة، وصف)
+  → يضغط "حفظ"
+
+ جميع العملاء في أنحاء اليمن:
+  → يفتحون الموقع
+  → يرون المنتج الجديد فوراً!
+  → يمكنهم الاستفسار عبر واتساب مباشرة
+
+ التحديث الفوري يعمل خلال ثوانٍ!
+
+══════════════════════════════════════════════════════════════════════
+ 📞 معلومات التواصل المضمنة:
+══════════════════════════════════════════════════════════════════════
+
+  رمزي القحطاني - مسؤول المبيعات
+  📞 المبيعات:      782002220
+  🧮 الحسابات:      782002225
+  📞 الاستفسار:     782002229
+  🚚 التوصيل:       784414445
+  💬 واتساب:        +967 782 002 220
+  📧 البريد:        info@royal-pipes.com
+
+══════════════════════════════════════════════════════════════════════
+  أمان الموقع:
+══════════════════════════════════════════════════════════════════════
+
+  • Supabase مجاني للاستخدام التجاري (حتى 500MB)
+  • Netlify مجاني مع شهادة SSL (HTTPS) مدمجة
+  • لوحة التحكم محمية بكلمة مرور
+  • البيانات تُحفظ في سحابة آمنة ومشفره
+
+══════════════════════════════════════════════════════════════════════

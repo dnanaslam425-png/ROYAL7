@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Tajawal", "Cairo", system-ui, sans-serif;
+  --color-royal-50: #eef4ff;
+  --color-royal-100: #d9e6ff;
+  --color-royal-200: #b8d0ff;
+  --color-royal-300: #8ab0ff;
+  --color-royal-400: #5a8bff;
+  --color-royal-500: #2f5fff;
+  --color-royal-600: #1a47e6;
+  --color-royal-700: #1438b8;
+  --color-royal-800: #0f2f8a;
+  --color-royal-900: #0a2360;
+  --color-royal-950: #0d2d6b;
+  --color-silver-50: #fafbfc;
+  --color-silver-100: #f1f4f7;
+  --color-silver-200: #e2e7ec;
+  --color-silver-300: #cdd4dc;
+  --color-silver-400: #aab3bd;
+  --color-silver-500: #828da0;
+}
+
+html,
+body {
+  font-family: "Tajawal", "Cairo", system-ui, sans-serif;
+  background: #fafbfc;
+  color: #0a2360;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #e2e7ec 0%, #f1f4f7 50%, #e2e7ec 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+@keyframes slideFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.anim-fade { animation: slideFade 0.45s ease-out; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.bg-royal-gradient {
+  background: linear-gradient(135deg, #0a2360 0%, #1438b8 55%, #1a47e6 100%);
+}
+.text-royal-gradient {
+  background: linear-gradient(135deg, #1438b8 0%, #2f5fff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pattern-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+*:focus-visible {
+  outline: 2px solid #2f5fff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

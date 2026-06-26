@@ -1,0 +1,328 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   🚀 دليل الاستضافة السحابية - موقع رويال                     ║
+║            مصنع رويال للأنابيب ومستلزماتها - Royal Factory                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📋 ملخص العملية:
+  1. قاعدة بيانات Supabase (مجانية) ← لتخزين البيانات سحابياً
+  2. استضافة Netlify (مجانية) ← لرفع الموقع على الإنترنت
+  3. النتيجة: إضافة منتج من لوحة التحكم → يظهر فوراً لجميع العملاء!
+
+═══════════════════════════════════════════════════════════════════════════════
+ الخطوة 1: إنشاء قاعدة البيانات السحابية (Supabase)
+═══════════════════════════════════════════════════════════════════════════════
+
+1.1 أنشئ حساب على https://supabase.com
+    → سجّل الدخول عبر Google أو GitHub (مجاني تماماً)
+
+1.2 اضغط "New Project"
+    → Project name: royal-pipes
+    → Database password: اختر كلمة مرور قوية (احتفظ بها!)
+    → Region: اختر الأقرب (مثلاً Frankfurt أو Singapore)
+    → انتظر دقيقة حتى يكتمل الإنشاء
+
+1.3 افتح SQL Editor (من القائمة الجانبية)
+    → أنشئ ملف SQL جديد
+    → انسخ الكود التالي وألصقه:
+
+─────── BEGIN SQL CODE ───────
+
+-- === جدول المنتجات ===
+CREATE TABLE products (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category_id TEXT NOT NULL,
+  subcategory_id TEXT NOT NULL,
+  price NUMERIC DEFAULT 0,
+  currency TEXT DEFAULT 'ريال',
+  description TEXT,
+  image TEXT,
+  featured BOOLEAN DEFAULT FALSE,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT,
+  updated_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- === جدول الوكلاء ===
+CREATE TABLE agents (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT DEFAULT '',
+  address TEXT DEFAULT '',
+  governorate_id TEXT DEFAULT '',
+  logo TEXT,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- === جدول البنرات ===
+CREATE TABLE banners (
+  id TEXT PRIMARY KEY,
+  title TEXT DEFAULT '',
+  subtitle TEXT DEFAULT '',
+  cta TEXT DEFAULT '',
+  link TEXT DEFAULT '',
+  image TEXT DEFAULT '',
+  active BOOLEAN DEFAULT TRUE,
+  expires_at TEXT,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- === جدول الرسائل ===
+CREATE TABLE messages (
+  id TEXT PRIMARY KEY,
+  name TEXT DEFAULT '',
+  email TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  subject TEXT DEFAULT '',
+  message TEXT DEFAULT '',
+  read BOOLEAN DEFAULT FALSE,
+  created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+);
+
+-- === جدول الإعدادات ===
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value JSONB DEFAULT '{}'::JSONB
+);
+
+-- === تفعيل Realtime (التحديث الفوري!) ===
+-- هذا يجعل المنتجات تظهر فوراً عند إضافتها!
+ALTER PUBLICATION supabase_realtime ADD TABLE products;
+ALTER PUBLICATION supabase_realtime ADD TABLE agents;
+ALTER PUBLICATION supabase_realtime ADD TABLE banners;
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+
+-- === سياسات الأمان ===
+-- القراءة مفتوحة للجميع (أي شخص يرى المنتجات)
+CREATE POLICY "anyone_read_products" ON products FOR SELECT USING (true);
+CREATE POLICY "anyone_read_agents" ON agents FOR SELECT USING (true);
+CREATE POLICY "anyone_read_banners" ON banners FOR SELECT USING (true);
+CREATE POLICY "anyone_read_messages" ON messages FOR SELECT USING (true);
+CREATE POLICY "anyone_read_settings" ON settings FOR SELECT USING (true);
+
+-- الكتابة متاحة (للمدير عبر لوحة التحكم)
+CREATE POLICY "admin_write_products" ON products FOR INSERT WITH CHECK (true);
+CREATE POLICY "admin_write_products" ON products FOR UPDATE USING (true);
+CREATE POLICY "admin_write_products" ON products FOR DELETE USING (true);
+CREATE POLICY "admin_write_agents" ON agents FOR ALL USING (true);
+CREATE POLICY "admin_write_banners" ON banners FOR ALL USING (true);
+CREATE POLICY "admin_write_messages" ON messages FOR ALL USING (true);
+CREATE POLICY "admin_write_settings" ON settings FOR ALL USING (true);
+
+-- === البيانات الافتراضية ===
+INSERT INTO products (id, name, category_id, subcategory_id, price, currency, description, image, featured) VALUES
+('p1', 'ماسورة PVC-U أبيض 20ملم (½ بوصة)', 'plumbing', 'pvc-pipes', 85, 'ريال', 'ماسورة PVC-U أبيض اللون، قطر 20 ملم (½ بوصة)، ضغط 10 بار، طول 3 متر.', '/images/hero-pipes.jpg', true),
+('p2', 'ماسورة PVC-U أبيض 25ملم (¾ بوصة)', 'plumbing', 'pvc-pipes', 120, 'ريال', 'ماسورة PVC-U أبيض، قطر 25 ملم (¾ بوصة)، ضغط 10 بار.', '/images/hero-pipes.jpg', false),
+('p3', 'ماسورة PVC-U أبيض 110ملم (4 بوصة)', 'plumbing', 'pvc-pipes', 1100, 'ريال', 'ماسورة PVC-U أبيض، قطر 110 ملم (4 بوصة)، ضغط 6 بار.', '/images/hero-pipes.jpg', true),
+('p4', 'ماسورة PE للري 32ملم - 100 متر', 'agriculture', 'irrigation-pipes', 380, 'ريال', 'ماسورة PE أسود للري، قطر 32 ملم، ضغط 6 بار.', '/images/agriculture-irrigation.jpg', true),
+('p5', 'أنبوب تنقيط 16ملم (1000 متر)', 'agriculture', 'drip-irrigation', 1800, 'ريال', 'أنبوب تنقيط PE أسود، قطر 16 ملم، طول 1000 متر.', '/images/agriculture-irrigation.jpg', true),
+('p6', 'سلك NYM 3×1.5 ملم (100 متر)', 'electrical', 'cables', 850, 'ريال', 'سلك كهرباء نوع NYM، 3 أسلاك × 1.5 ملم مربع.', '/images/electrical-cables.jpg', true),
+('p7', 'حديد تسليح 10ملم (12 متر)', 'building', 'rebar', 180, 'ريال', 'حديد تسليح رصاصي قطر 10 ملم، طول 12 متر.', '/images/building-materials.jpg', true),
+('p8', 'أسمنت بورتلاندي 50كغ', 'building', 'cement', 180, 'ريال', 'كيس أسمنت بورتلاندي نوع I، 50 كيلوجرام.', '/images/building-materials.jpg', true);
+
+INSERT INTO agents (id, name, phone, address, governorate_id) VALUES
+('a101', 'مؤسسة النور للتجارة', '+967 771 234 567', 'شارع الزبيري، صنعاء', 'sanaa'),
+('a103', 'مؤسسة عدن للسباكة', '+967 773 456 789', 'حي المعلا، عدن', 'aden'),
+('a104', 'شركة تعز التجارية', '+967 774 567 890', 'حي الجحملية، تعز', 'taiz'),
+('a105', 'مؤسسة حضرموت', '+967 775 678 901', 'حي المنصورة، المكلا', 'hadrmut');
+
+INSERT INTO banners (id, title, subtitle, cta, link, image, active) VALUES
+('bn1', 'مواسير رويال PVC-U... الجودة بكل المقاييس', 'مصنع الأنوار للبلاستيك ينتج وفق المواصفات العالمية.', 'اكتشف المنتجات', '#products/plumbing', '/images/hero-pipes.jpg', true),
+('bn2', 'شبكات الري والزراعة الحديثة', 'أنابيب تنقيط، مرشات، مضخات، وفلاتر.', 'تصفح مواد الزراعة', '#products/agriculture', '/images/agriculture-irrigation.jpg', true);
+
+INSERT INTO settings (key, value) VALUES ('general', '{
+  "productName": "مصنع رويال للأنابيب ومستلزماتها",
+  "tagline": "Royal Factory for Pipes & Accessories",
+  "managerName": "رمزي القحطاني - مسؤول المبيعات",
+  "salesPhone": "782002220",
+  "accountsPhone": "782002225",
+  "inquiryPhone": "782002229",
+  "deliveryPhone": "784414445",
+  "whatsapp": "+967 782 002 220",
+  "email": "info@royal-pipes.com",
+  "address": "مصنع الأنوار للبلاستيك - رويال"
+}');
+
+─────── END SQL CODE ───────
+
+1.4 اضغط "Run" لتنفيذ الكود
+    → إذا ظهر "SUCCESS" ✅ → تم بنجاح!
+
+1.5 احصل على مفاتيح الاتصال:
+    → اذهب إلى: Settings (⚙️) → API
+    → انسخ هذه القيم:
+      ✓ Project URL (مثل: https://xxxxx.supabase.co)
+      ✓ anon/public key (سلسلة طويلة من الحروف)
+
+═══════════════════════════════════════════════════════════════════════════════
+🔧 الخطوة 2: ربط الموقع بقاعدة البيانات
+═══════════════════════════════════════════════════════════════════════════════
+
+2.1 في مجلد المشروع، أنشئ ملف `.env`:
+
+─────── .env ───────
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJh......xxxxx
+────────────────────
+
+2.2 افتح `src/App.tsx` وأضف هذا في الأعلى:
+
+import { useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { actions, getStore, resetStore } from "./data/store";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+// تحميل البيانات من السحابة عند بدء الموقع
+async function initCloudData() {
+  if (!supabase) return;
+
+  try {
+    // تحميل المنتجات
+    const { data: products } = await supabase.from("products").select("*").order("created_at", { ascending: false });
+    if (products?.length) {
+      const store = getStore();
+      store.products = products.map(p => ({
+        id: p.id, name: p.name, categoryId: p.category_id,
+        subcategoryId: p.subcategory_id, price: p.price || 0,
+        currency: p.currency || "ريال", description: p.description || "",
+        image: p.image || "", featured: !!p.featured, createdAt: p.created_at
+      }));
+    }
+
+    // تحميل الوكلاء
+    const { data: agents } = await supabase.from("agents").select("*").order("created_at", { ascending: false });
+    if (agents?.length) {
+      const store = getStore();
+      store.agents = agents.map(a => ({
+        id: a.id, name: a.name, phone: a.phone || "",
+        address: a.address || "", governorateId: a.governorate_id || "",
+        logo: a.logo, createdAt: a.created_at
+      }));
+    }
+
+    // تحميل البنرات
+    const { data: banners } = await supabase.from("banners").select("*").order("created_at", { ascending: false });
+    if (banners?.length) {
+      const store = getStore();
+      store.banners = banners.map(b => ({
+        id: b.id, title: b.title || "", subtitle: b.subtitle || "",
+        cta: b.cta || "", link: b.link || "", image: b.image || "",
+        active: b.active !== false
+      }));
+    }
+
+    // تفعيل التحديث الفوري!
+    supabase
+      .channel("all_changes")
+      .on("postgres_changes", { event: "*", schema: "public" }, () => {
+        window.location.reload(); // إعادة تحميل الموقع لرؤية التغييرات
+      })
+      .subscribe();
+
+  } catch (e) {
+    console.log("Cloud sync error:", e);
+  }
+}
+
+// أضف هذا في دالة App():
+useEffect(() => { initCloudData(); }, []);
+
+═══════════════════════════════════════════════════════════════════════════════
+🔧 الخطوة 3: رفع الموقع على الإنترنت (Netlify)
+═══════════════════════════════════════════════════════════════════════════════
+
+الطريقة الأسهل - سحب وإفلات:
+
+3.1 ابنِ المشروع:
+    npm run build
+    → سيظهر مجلد dist/
+
+3.2 افتح https://app.netlify.com/drop
+    → اسحب مجلد dist/ وأفلته
+    → سيتم رفع الموقع فوراً!
+    → ستحصل على رابط مثل: https://royal-pipes.netlify.app
+
+الطريقة الاحترافية - عبر Git:
+
+3.1 أنشئ حساب على https://github.com
+3.2 أنشئ Repository جديد اسمه: royal-pipes
+3.3 ارفع كل ملفات المشروع على GitHub
+3.4 افتح https://netlify.com → "Add new site" → "Import from Git"
+3.5 اختر Repository → اضغط Deploy
+3.6 أضف متغيرات البيئة:
+    → Site settings → Environment variables
+    → VITE_SUPABASE_URL
+    → VITE_SUPABASE_ANON_KEY
+
+═══════════════════════════════════════════════════════════════════════════════
+ الخطوة 4: تفعيل Realtime (المنتجات تظهر فوراً!)
+═══════════════════════════════════════════════════════════════════════════════
+
+لجعل المنتجات تظهر تلقائياً عند إضافتها من لوحة التحكم:
+
+4.1 في Supabase → Database → Replication
+    → فعّل RLS على كل الجداول
+
+4.2 في Supabase → Project Settings → API
+    → تأكد أن "Enable Realtime" مفعل
+
+4.3 في الكود، أضف هذا في `src/App.tsx`:
+
+import { supabase } from "./lib/supabase";
+
+// استماع للتغييرات
+useEffect(() => {
+  if (!supabase) return;
+
+  const channel = supabase
+    .channel('products_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+      // عند تغيير أي منتج → أعد تحميل البيانات
+      window.location.reload();
+    })
+    .subscribe();
+
+  const channel2 = supabase
+    .channel('banners_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, () => {
+      window.location.reload();
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+    supabase.removeChannel(channel2);
+  };
+}, []);
+
+═══════════════════════════════════════════════════════════════════════════════
+📱 النتيجة النهائية:
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ المدير (رمزي القحطاني) يفتح لوحة التحكم من أي جهاز
+✅ يضيف منتج جديد (اسم، سعر، صورة، وصف)
+✅ المنتج يُحفظ في قاعدة البيانات السحابية فوراً
+✅ جميع العملاء في اليمن يرون المنتج الجديد على الموقع!
+✅ التغييرات تظهر خلال ثوانٍ بفضل Supabase Realtime
+
+═══════════════════════════════════════════════════════════════════════════════
+ أمان الموقع:
+═══════════════════════════════════════════════════════════════════════════════
+
+1. لوحة التحكم محمية بكلمة مرور: admin / royal2026
+2. غيّر كلمة المرور من src/pages/AdminLogin.tsx
+3. Supabase مجاني للاستخدام التجاري (حتى 500MB بيانات)
+4. Netlify مجاني مع شهادة SSL (HTTPS) مدمجة
+
+═══════════════════════════════════════════════════════════════════════════════
+📞 الدعم:
+═══════════════════════════════════════════════════════════════════════════════
+
+- Supabase Docs: https://supabase.com/docs
+- Netlify Docs: https://docs.netlify.com
+- للمساعدة التقنية: تواصل مع مطور الموقع
+
+═══════════════════════════════════════════════════════════════════════════════

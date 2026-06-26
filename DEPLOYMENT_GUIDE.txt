@@ -1,0 +1,399 @@
+══════════════════════════════════════════════════════════════════════╗
+║  🏭 مصنع رويال للأنابيب ومستلزماتها                             ║
+║  دليل النشر على خادم حقيقي (VPS + MySQL + Node.js)             ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+📦 الملفات المرفقة:
+
+  📁 api/
+    ├── server.js              ← خادم Node.js + Express + MySQL API
+    ├── setup-database.js      ← سكربت إنشاء قاعدة البيانات + البيانات
+    ├── package.json           ← تبعيات الخادم
+    └── .env.example           ← نموذج ملف الإعدادات
+
+  📁 src/
+    └── lib/
+        └── mysql-api.ts       ← ربط React مع API الخادم
+
+  📄 DEPLOYMENT_GUIDE.txt      ← هذا الدليل
+
+══════════════════════════════════════════════════════════════════════
+ الهيكل العام:
+
+  ──────────────┐     HTTPS     ┌──────────────┐     REST API     ┌──────────────┐
+  │  الموقع       │◄────────────►│  Nginx       │◄───────────────►│  MySQL       │
+  │  (React)     │               │  (Reverse    │                 │  Database    │
+  │  (متصفح)     │               │   Proxy)     │                 │              │
+  ──────────────┘               └──────┬───────┘                 └──────────────┘
+                                        │
+                                        ▼
+                                 ┌──────────────┐
+                                 │  Node.js     │
+                                 │  (API Server)│
+                                 │  :3000       │
+                                 └──────────────┘
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 1: شراء خادم VPS
+══════════════════════════════════════════════════════════════════════
+
+خيارات مُوصى بها (من الأرخص للأغلى):
+
+  💰 DigitalOcean  →  $6/شهر (1GB RAM, 1 vCPU)
+     رابط: https://www.digitalocean.com/
+
+  💰 Hetzner       →  €5/شهر (2GB RAM, 1 vCPU)  
+     رابط: https://www.hetzner.com/
+
+   Linode        →  $5/شهر (1GB RAM, 1 vCPU)
+     رابط: https://www.linode.com/
+
+  💰 AWS           →  ~$10/شهر (t3.micro)
+     رابط: https://aws.amazon.com/
+
+  ✅ مُوصى بـ DigitalOcean (أسهل للمبتدئين)
+     → اختر نظام Ubuntu 22.04 أو 24.04
+     → اختر منطقة قريبة من اليمن (Frankfurt أو Singapore)
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 2: الاتصال بالخادم عبر SSH
+══════════════════════════════════════════════════════════════════════
+
+# من جهازك (Terminal أو CMD):
+ssh root@عنوان_الخادم
+
+# مثال:
+ssh root@159.89.123.45
+
+# ستسألك كلمة المرور → أدخلها
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 3: تثبيت المتطلبات على الخادم
+══════════════════════════════════════════════════════════════════════
+
+# انسخ كل سطر والصقه في SSH:
+
+# 1️⃣ تحديث النظام
+apt update && apt upgrade -y
+
+# 2️ تثبيت Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
+
+# 3️⃣ تثبيت MySQL
+apt install -y mysql-server
+
+# 4️⃣ تثبيت Nginx
+apt install -y nginx
+
+# 5️ تثبيت PM2 (إدارة عملية Node.js)
+npm install -g pm2
+
+# 6️ التحقق من التثبيت
+node --version    # يجب أن يظهر v20.x.x
+mysql --version   # يجب أن يظهر 8.x
+nginx -v          # يجب أن يظهر 1.x
+pm2 --version     # يجب أن يظهر 5.x
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 4: إنشاء قاعدة البيانات
+══════════════════════════════════════════════════════════════════════
+
+# ادخل إلى MySQL:
+mysql -u root -p
+
+# أدخل كلمة MySQL (إذا طُلبت) ثم الصق الأوامر التالية:
+
+CREATE DATABASE royal_pipes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'royal'@'localhost' IDENTIFIED BY 'RoyalPipes2026!';
+GRANT ALL PRIVILEGES ON royal_pipes.* TO 'royal'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+
+# تذكر كلمة المرور: RoyalPipes2026! (يمكنك تغييرها)
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 5: رفع ملفات المشروع
+══════════════════════════════════════════════════════════════════════
+
+# الطريقة 1: عبر Git (الأسهل)
+cd /var/www
+git clone https://github.com/اسمك/royal-pipes.git
+cd royal-pipes
+
+# الطريقة 2: عبر SCP (من جهازك)
+# في Terminal جديد على جهازك:
+scp -r api/ root@عنوان_الخادم:/var/www/royal-pipes/
+scp -r dist/ root@عنوان_الخادم:/var/www/royal-pipes/
+
+# الطريقة 3: عبر FileZilla (واجهة رسومية)
+# حمله من: https://filezilla-project.org/
+# اتصل بـ: sftp://عنوان_الخادم مع root وكلمة مرور الخادم
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 6: إعداد قاعدة البيانات
+══════════════════════════════════════════════════════════════════════
+
+cd /var/www/royal-pipes/api
+
+# أنشئ ملف .env:
+cat > .env << 'EOF'
+DB_HOST=localhost
+DB_USER=royal
+DB_PASSWORD=RoyalPipes2026!
+DB_NAME=royal_pipes
+DB_PORT=3306
+PORT=3000
+JWT_SECRET=royal-secret-change-this-2026
+EOF
+
+# ثبت تبعيات Node.js:
+npm install
+
+# أنشئ الجداول وأدخل البيانات:
+node setup-database.js
+
+# يجب أن ترى:
+# ✅ تم إنشاء قاعدة البيانات
+# ✅ تم إنشاء جميع الجداول
+# ✅ تم إدراج 12 منتج
+# ✅ تم إدراج 22 وكيل
+# ✅ تم إدراج 3 بانر
+# ✅ تم إدراج الإعدادات
+# ✅ تم إدراج حساب المدير
+# 🎉 تم إعداد قاعدة البيانات بنجاح!
+
+══════════════════════════════════════════════════════════════════════
+ الخطوة 7: بناء وتشغيل API
+══════════════════════════════════════════════════════════════════════
+
+# تأكد أنك في مجلد api:
+cd /var/www/royal-pipes/api
+
+# شغّل الخادم عبر PM2:
+pm2 start server.js --name royal-api
+pm2 save
+pm2 startup
+
+# تحقق من التشغيل:
+pm2 status
+
+# يجب أن يظهر:
+# ┌────┬─────────────┬──────────┐
+# │ id │ name        │ status   │
+# ├────┼─────────────┼──────────
+# │ 0  │ royal-api   │ online   │
+# └────┴─────────────┴──────────┘
+
+# اختبر API:
+curl http://localhost:3000/api/products
+
+# يجب أن يعيد بيانات المنتجات بصيغة JSON
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 8: بناء الموقع الأمامي (React)
+══════════════════════════════════════════════════════════════════════
+
+cd /var/www/royal-pipes
+
+# أنشئ ملف .env للواجهة الأمامية:
+cat > .env << 'EOF'
+VITE_API_URL=http://عنوان_الخادم:3000
+EOF
+
+# ابنِ المشروع:
+npm install
+npm run build
+
+# سيُنشئ مجلد dist/ بالملفات النهائية
+
+══════════════════════════════════════════════════════════════════════
+ الخطوة 9: إعداد Nginx (الخادم العكسي + SSL)
+══════════════════════════════════════════════════════════════════════
+
+# أنشئ ملف إعداد Nginx:
+cat > /etc/nginx/sites-available/royal << 'EOF'
+server {
+    listen 80;
+    server_name عنوان_الخادم www.عنوان_الخادم;
+
+    # الموقع الأمامي (React)
+    location / {
+        root /var/www/royal-pipes/dist;
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "public, max-age=31536000";
+    }
+
+    # API (Node.js)
+    location /api/ {
+        proxy_pass http://localhost:3000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # رفع الصور
+    location /api/uploads/ {
+        proxy_pass http://localhost:3000/api/uploads/;
+        expires 30d;
+    }
+}
+EOF
+
+# فعّل الموقع:
+ln -s /etc/nginx/sites-available/royal /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+# اختبر الإعداد:
+nginx -t
+
+# أعد تشغيل Nginx:
+systemctl restart nginx
+
+# اختبر من المتصفح:
+# افتح: http://عنوان_الخادم
+# يجب أن يظهر موقع رويال!
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 10: إضافة شهادة SSL (HTTPS مجاني)
+══════════════════════════════════════════════════════════════════════
+
+# تثبيت Certbot:
+apt install -y certbot python3-certbot-nginx
+
+# إنشاء شهادة (غيّر البريد والاسم):
+certbot --nginx -d عنوان_الخادم -d www.عنوان_الخادم \
+  --non-interactive --agree-tos --email info@royal-pipes.com
+
+# سيتم:
+# 1. إنشاء شهادة SSL مجانية من Let's Encrypt
+# 2. تحويل التلقائي لـ HTTPS
+# 3. تحديث إعداد Nginx تلقائياً
+
+# اختبر: افتح https://عنوان_الخادم
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 11: ربط الواجهة الأمامية بالـ API
+══════════════════════════════════════════════════════════════════════
+
+لتفعيل الاتصال بين React و MySQL API:
+
+1. عدّل ملف src/App.tsx واستبدل `getStore()` بـ API calls:
+
+   import * as api from './lib/mysql-api';
+
+   // تحميل المنتجات
+   const products = await api.products.getAll();
+
+   // إضافة منتج
+   await api.products.create({ name: '...', ... });
+
+   // تسجيل دخول
+   await api.login('admin', 'royal2026');
+
+2. ابنِ المشروع مرة أخرى:
+   npm run build
+
+3. انسخ مجلد dist/ إلى الخادم:
+   scp -r dist/* root@عنوان_الخادم:/var/www/royal-pipes/dist/
+
+══════════════════════════════════════════════════════════════════════
+📋 الخطوة 12: ربط اسم النطاق (Domain)
+══════════════════════════════════════════════════════════════════════
+
+1. اشترِ اسم نطاق (مثلاً royal-pipes.com):
+   → Namecheap: https://www.namecheap.com
+   → GoDaddy: https://www.godaddy.com
+   → السعر: ~$10/سنة
+
+2. عدّل DNS Records:
+   نوع السجل: A
+   الاسم: @
+   القيمة: عنوان_الخادم (مثال: 159.89.123.45)
+
+3. كرر لـ www:
+   نوع السجل: A
+   الاسم: www
+   القيمة: عنوان_الخادم
+
+4. انتظر 1-24 ساعة حتى يتم تفعيل DNS
+
+5. أعد تثبيت SSL مع اسم النطاق:
+   certbot --nginx -d royal-pipes.com -d www.royal-pipes.com
+
+══════════════════════════════════════════════════════════════════════
+📋 أوامر مهمة لإدارة الخادم:
+══════════════════════════════════════════════════════════════════════
+
+# حالة API:
+pm2 status
+pm2 logs royal-api
+
+# إعادة تشغيل API:
+pm2 restart royal-api
+
+# إيقاف API:
+pm2 stop royal-api
+
+# حالة MySQL:
+systemctl status mysql
+
+# حالة Nginx:
+systemctl status nginx
+nginx -t          # اختبار الإعداد
+systemctl reload nginx  # إعادة تحميل
+
+# تحديث المشروع:
+cd /var/www/royal-pipes
+git pull          # إذا كان على Git
+npm install       # تثبيت تبعيات جديدة
+npm run build     # إعادة بناء الواجهة
+pm2 restart royal-api  # إعادة تشغيل API
+
+# النسخ الاحتياطي لقاعدة البيانات:
+mysqldump -u royal -p'RoyalPipes2026!' royal_pipes > backup_$(date +%Y%m%d).sql
+
+# استعادة النسخة الاحتياطية:
+mysql -u royal -p'RoyalPipes2026!' royal_pipes < backup_20260101.sql
+
+══════════════════════════════════════════════════════════════════════
+📋 لوحة التحكم:
+══════════════════════════════════════════════════════════════════════
+
+بعد النشر، افتح: https://موقعك.com/admin
+
+بيانات الدخول:
+  اسم المستخدم: admin
+  كلمة المرور:  royal2026
+
+══════════════════════════════════════════════════════════════════════
+ التكلفة الشهرية التقريبية:
+══════════════════════════════════════════════════════════════════════
+
+  VPS (DigitalOcean):    $6/شهر
+  اسم النطاق:             ~$1/شهر ($12/سنة)
+  شهادة SSL:              مجاني (Let's Encrypt)
+  ───────────────────────────────
+  المجموع:                ~$7/شهر
+
+══════════════════════════════════════════════════════════════════════
+ نصائح أمنية:
+══════════════════════════════════════════════════════════════════════
+
+1. غيّر كلمة SSH الافتراضية
+2. فعّل JFirewall (ufw):
+   ufw allow 22    # SSH
+   ufw allow 80    # HTTP
+   ufw allow 443   # HTTPS
+   ufw enable
+
+3. غيّر كلمة مرور MySQL
+4. غيّر JWT_SECRET في .env
+5. غيّر كلمة مرور لوحة التحكم
+
+══════════════════════════════════════════════════════════════════════
